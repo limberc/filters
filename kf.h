@@ -7,76 +7,70 @@
 class kalman {
 public:
 
-	/**
-	*   sys_dyn_mat - System dynamics matrix
-	*   output_mat - Output matrix
-	*   process_noise_covar - Process noise covariance
-	*   measurement_noise_covar - Measurement noise covariance
-	*   est_err_covar - Estimate error covariance
-	*/
-	kalman(
-		double dt,
-		const Eigen::MatrixXd& sys_dyn_mat,
-		const Eigen::MatrixXd& output_mat,
-		const Eigen::MatrixXd& process_noise_covar,
-		const Eigen::MatrixXd& measurement_noise_covar,
-		const Eigen::MatrixXd& est_err_covar
-	);
+	// state vector
+	Eigen::VectorXd state_vec;
+
+	// state covariance matrix
+	Eigen::MatrixXd state_covar_mat;
+
+	// state transistion matrix
+	Eigen::MatrixXd state_trans_mat;
+
+	// process covariance matrix
+	Eigen::MatrixXd process_covar_mat;
+
+	// measurement matrix
+	Eigen::MatrixXd measurement_mat;
+
+	// measurement covariance matrix
+	Eigen::MatrixXd measurement_covar_mat;
 
 	/**
-	* Create a blank estimator.
+	* Constructor
 	*/
 	kalman();
 
 	/**
-	* Initialize the filter with initial states as zero.
+	* Destructor
 	*/
-	void init();
+	virtual ~kalman();
 
 	/**
-	* Initialize the filter with a guess for initial states.
+	* Init Initializes Kalman filter
+	* @param x_in Initial state
+	* @param P_in Initial state covariance
+	* @param F_in Transition matrix
+	* @param H_in Measurement matrix
+	* @param R_in Measurement covariance matrix
+	* @param Q_in Process covariance matrix
 	*/
-	void init(double t0, const Eigen::VectorXd& x0);
+	void init(Eigen::VectorXd &x_in, Eigen::MatrixXd &P_in, Eigen::MatrixXd &F_in,
+		Eigen::MatrixXd &H_in, Eigen::MatrixXd &R_in, Eigen::MatrixXd &Q_in);
 
 	/**
-	* Update the estimated state based on measured values. The
-	* time step is assumed to remain constant.
+	* Prediction Predicts the state and the state covariance
+	* using the process model
+	* @param delta_T Time between k and k+1 in s
 	*/
-	void update(const Eigen::VectorXd& y);
+	void predict();
 
 	/**
-	* Update the estimated state based on measured values,
-	* using the given time step and dynamics matrix.
+	* Updates the state by using standard Kalman Filter equations
+	* @param z The measurement at k+1
 	*/
-	void update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A);
+	void update(const Eigen::VectorXd &z);
 
 	/**
-	* Return the current state and time.
+	* Updates the state by using Extended Kalman Filter equations
+	* @param z The measurement at k+1
 	*/
-	Eigen::VectorXd state() { return x_hat; };
-	double time() { return t; };
+	void update_ekf(const Eigen::VectorXd &z);
 
-private:
+	/**
+	* Universal update Kalman Filter step. Equations from the lectures
+	* @param y The error
+	*/
+	void univ_update_kf(const Eigen::VectorXd &y);
 
-	// Matrices for computation
-	Eigen::MatrixXd A, C, Q, R, P, K, P0;
-
-	// System dimensions
-	int m, n;
-
-	// Initial and current time
-	double t0, t;
-
-	// Discrete time step
-	double dt;
-
-	// Is the filter initialized?
-	bool initialized;
-
-	// n-size identity
-	Eigen::MatrixXd I;
-
-	// Estimated states
-	Eigen::VectorXd x_hat, x_hat_new;
 };
 #endif

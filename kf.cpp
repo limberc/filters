@@ -2,64 +2,68 @@
 #include <stdexcept>
 #include "kf.h"
 
-/**
-*   sys_dyn_mat - System dynamics matrix
-*   output_mat - Output matrix
-*   process_noise_covar - Process noise covariance
-*   measurement_noise_covar - Measurement noise covariance
-*   est_err_covar - Estimate error covariance
-*/
-kalman::kalman(
-	double dt,
-	const Eigen::MatrixXd& sys_dyn_mat,
-	const Eigen::MatrixXd& output_mat,
-	const Eigen::MatrixXd& process_noise_covar,
-	const Eigen::MatrixXd& measurement_noise_covar,
-	const Eigen::MatrixXd& est_err_covar)
-	:A(A), C(C), Q(Q), R(R), P0(P),
-	m(C.rows()), n(A.rows()), dt(dt), initialized(false),
-	I(n, n), x_hat(n), x_hat_new(n) {
-	I.setIdentity();
+using Eigen::MatrixXd;
+using Eigen::VectorXd;
+
+kalman::kalman() {}
+
+kalman::~kalman() {}
+
+void kalman::init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
+	MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in) {
+	state_vec = x_in; // object state
+	state_covar_mat = P_in; // object covariance matrix
+	state_trans_mat = F_in; // state transition matrix
+	measurement_mat = H_in; // measurement matrix
+	measurement_covar_mat = R_in; // measurement covariance matrix
+	process_covar_mat = Q_in; // process covariance matrix
 }
 
-kalman::kalman(){}
-
-/**
- * Initalize Kalman Filters
- */
-void kalman::init(double t0,const Eigen::VectorXd& x0)
-{
-	x_hat = x0;
-	P = P0;
-	this->t0 = t0;
-	initialized = true;
+void kalman::predict() {
+	/**
+	TODO:
+	* predict the state
+	*/
+	state_vec = state_trans_mat * state_vec; // There is no external motion, so, we do not have to add "+u"
+	MatrixXd Ft = state_trans_mat.transpose();
+	state_covar_mat = state_trans_mat * state_covar_mat * Ft + process_covar_mat;
 }
 
-void kalman::init()
-{
-	x_hat.setZero();
-	P = P0;
-	t0 = 0;
-	t = t0;
-	initialized = true;
+void kalman::update(const VectorXd &z) {
+	/**
+	TODO:
+	* update the state by using Kalman Filter equations
+	* Kalman filter update step. 
+	*/
+	VectorXd y = z - measurement_mat * state_vec; // error calculation
+	univ_update_kf(y);
 }
 
-void kalman::update(const Eigen::VectorXd& y)
-{
-	if (!initialized)
-		throw std::runtime_error("Filter isn't initialized yet.");
-	x_hat_new = A * x_hat;
-	P = A * P*A.transpose() + Q;
-	K = P * C.transpose()*(C*P*C.transpose() + R).inverse();
-	x_hat_new += K * (y - C * x_hat_new);
-	P = (I - K * C)*P;
-	x_hat = x_hat_new;
+void kalman::update_ekf(const VectorXd &z) {
+	/**
+	TODO:
+	* update the state by using Extended Kalman Filter equations
+	*/
+	double rho = sqrt(state_vec(0)*state_vec(0) + state_vec(1)*state_vec(1));
+	double theta = atan(state_vec(1) / state_vec(0));
+	double rho_dot = (state_vec(0)*state_vec(2) + state_vec(1)*state_vec(3)) / rho;
+	VectorXd h = VectorXd(3); // h(x_)
+	h << rho, theta, rho_dot;
 
-	t += dt;
+	VectorXd y = z - h;
+	// Calculations are essentially the same to the Update function
+	univ_update_kf(y);
 }
 
-void kalman::update(const Eigen::VectorXd& y, double dt, const Eigen::MatrixXd A) {
-	this->A = A;
-	this->dt = dt;
-	update(y);
+// Universal update Kalman Filter step. Equations from the lectures
+void kalman::univ_update_kf(const VectorXd &y) {
+	MatrixXd Ht = measurement_mat.transpose();
+	MatrixXd S = measurement_mat * state_covar_mat * Ht + measurement_covar_mat;
+	MatrixXd Si = S.inverse();
+	MatrixXd K = state_covar_mat * Ht * Si;
+	// New state
+	state_vec = state_vec + (K * y);
+	int x_size = state_vec.size();
+	MatrixXd I = MatrixXd::Identity(x_size, x_size);
+	state_covar_mat = (I - K * measurement_mat) * state_covar_mat;
 }

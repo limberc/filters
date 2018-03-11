@@ -242,10 +242,10 @@ void ukf::UpdateLidar(const VectorXd & z)
 	// Kalman gain
 	const MatrixXd K = P_ * H_laser_.transpose() * S_inv;
 
-	// Update state vector
+	// update state vector
 	x_ += K * y;
 
-	// Update state covariance matrix
+	// update state covariance matrix
 	P_ = (MatrixXd::Identity(n_x_, n_x_) - K * H_laser_) * P_;
 
 	// Calculate NIS
@@ -349,7 +349,7 @@ void ukf::UpdateRadar(const VectorXd & z)
 	// Angle normalization
 	z_diff(1) = NormAngle(z_diff(1));
 
-	// Update state vector and state covariance matrix
+	// update state vector and state covariance matrix
 	x_ += K * z_diff;
 	P_ -= K * S * K.transpose();
 

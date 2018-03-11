@@ -83,7 +83,7 @@ public:
 	/*----------------------------------------------------------------------------
 	@brief  GetStateEstimate
 
-	Output the current estimated state vector (x_)
+	Output the current estimated state vector (vec)
 
 	@return  Estimated state vector
 	----------------------------------------------------------------------------*/
